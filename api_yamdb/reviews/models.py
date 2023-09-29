@@ -94,7 +94,8 @@ class Comments(models.Model):
     text = models.TextField('Текст комментария')
     author = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
-    review = models.ForeignKey(Review, on_delete=models.CASCADE)
+    review = models.ForeignKey(Review, on_delete=models.CASCADE,
+                               related_name='comments')
 
     class Meta:
         verbose_name = 'Комментарий'
