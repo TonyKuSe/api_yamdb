@@ -1,7 +1,10 @@
-from django.urls import include, path
+from django.urls import path
+from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .v1 import urls as v1_urls
 
 urlpatterns = [
-    path('v1/', include(v1_urls)),
+    path(
+        'v1/auth/token/', TokenObtainPairView.as_view(),
+        name='token_obtain_pair'
+    ),
 ]
