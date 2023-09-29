@@ -3,7 +3,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from users.models import CustomUser
 
 
-class Titles(models.Model):
+class Title(models.Model):
     name = models.CharField('Название произведения',
                             max_length=200,
                             db_index=True)
@@ -11,14 +11,14 @@ class Titles(models.Model):
     category = models.ForeignKey('Category',
                                  on_delete=models.SET_NULL,
                                  null=True,
-                                 related_name='titles',
+                                 related_name='title',
                                  verbose_name='Категория')
     description = models.TextField('Описание',
                                    max_length=255,
                                    null=True,
                                    blank=True)
     genre = models.ManyToManyField('Genre',
-                                   related_name='titles',
+                                   related_name='title',
                                    verbose_name='Жанр')
 
     class Meta:
@@ -60,7 +60,7 @@ class Genre(models.Model):
 
 
 class GenreTitle(models.Model):
-    title_id = models.ForeignKey(Titles,
+    title_id = models.ForeignKey(Title,
                                  on_delete=models.CASCADE,
                                  related_name='genre_title')
     genre_id = models.ForeignKey(Genre,
@@ -72,7 +72,7 @@ class GenreTitle(models.Model):
 
 
 class Review(models.Model):
-    title = models.ForeignKey(Titles, verbose_name='titles',
+    title = models.ForeignKey(Title, verbose_name='titles',
                               on_delete=models.CASCADE,
                               related_name='reviews')
     text = models.TextField('Текст отзыва')
