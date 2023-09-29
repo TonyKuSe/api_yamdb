@@ -71,10 +71,13 @@ class GenreTitle(models.Model):
         return f'{self.title_id} {self.genre_id}'
 
 
-class Reviews(models.Model):
-    title = models.ForeignKey(Titles, on_delete=models.CASCADE)
+class Review(models.Model):
+    title = models.ForeignKey(Titles, verbose_name='titles',
+                              on_delete=models.CASCADE,
+                              related_name='reviews')
     text = models.TextField('Текст отзыва')
-    author = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    author = models.ForeignKey(CustomUser, on_delete=models.CASCADE,
+                               related_name='reviews')
     score = models.IntegerField('Оценка', validators=[MinValueValidator(1),
                                                       MaxValueValidator(10)])
     pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
@@ -84,18 +87,18 @@ class Reviews(models.Model):
         verbose_name_plural = 'Отзывы'
 
     def __str__(self):
-        return self.name
+        return self.text
 
 
 class Comments(models.Model):
     text = models.TextField('Текст комментария')
     author = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
-    review = models.ForeignKey(Reviews, on_delete=models.CASCADE)
+    review = models.ForeignKey(Review, on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Коментарии'
 
     def __str__(self):
-        return self.name
+        return self.text

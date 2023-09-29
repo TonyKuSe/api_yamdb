@@ -1,10 +1,11 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import filters, permissions, viewsets
-from rest_framework.pagination import LimitOffsetPagination
-
-from api.serializers import CategorySerializer, GenreSerializer, TitlesSerializer
-from api.mixins import BasaModelViewMixin                   
+from api.serializers import (CategorySerializer,
+                             GenreSerializer, TitlesSerializer,
+                             ReviewSerializer, CommentsSerializer)
+from api.mixins import BasaModelViewMixin
 from reviews.models import Category, Titles, Genre
+from .permissions import IsAuthorOrUserOrModerator
 
 
 class CategoryViewSet(BasaModelViewMixin):
@@ -38,4 +39,33 @@ class TitlesViewSet(viewsets.ModelViewSet):
     queryset = Titles.objects.all()
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
     serializer_class = TitlesSerializer
-    
+
+
+class ReviewViewSet(viewsets.ModelViewSet):
+    serializer_class = ReviewSerializer
+    permission_classes = (IsAuthorOrUserOrModerator,)
+
+    def get_queryset(self):
+        title = get_object_or_404(Titles, pk=self.kwargs.get('title_id'))
+        return title.reviews.all()
+
+    def perform_create(self, serializer):
+        title = get_object_or_404(Titles, pk=self.kwargs.get('title_id'))
+        serializer.save(author=self.request.user, title=title)
+
+
+class CommentViewSet(viewsets.ModelViewSet):
+    serializer_class = CommentsSerializer
+    permission_classes = (IsAuthorOrUserOrModerator,)
+
+    def get_queryset(self):
+        title = get_object_or_404(Titles, id=self.kwargs.get('title_id'))
+        review = get_object_or_404(
+            title.reviews, id=self.kwargs.get('review_id'))
+        return review.comments.all()
+
+    def perform_create(self, serializer):
+        title = get_object_or_404(Titles, id=self.kwargs.get('title_id'))
+        review = get_object_or_404(
+            title.reviews, id=self.kwargs.get('review_id'))
+        serializer.save(author=self.request.user, review=review)

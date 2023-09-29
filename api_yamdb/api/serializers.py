@@ -1,19 +1,17 @@
 from rest_framework import serializers
-from rest_framework.validators import UniqueTogetherValidator
-
-from reviews.models import Category, Genre, Titles
+from reviews.models import Category, Genre, Titles, Review, Comments
 
 
 class CategorySerializer(serializers.ModelSerializer):
-    
+
     count = serializers.SerializerMethodField()
-    
+
     class Meta:
         fields = ('id', 'name', 'slug', 'count',)
-        read_only_fields = ('id',) 
+        read_only_fields = ('id',)
         model = Category
         lookup_field = 'name'
-    
+
     def get_count(self, obj):
         return Category.objects.all().count()
 
@@ -22,7 +20,7 @@ class GenreSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = ('id', 'name', 'slug',)
-        read_only_fields = ('id',) 
+        read_only_fields = ('id',)
         model = Genre
         lookup_field = 'slug'
 
@@ -39,5 +37,25 @@ class TitlesSerializer(serializers.ModelSerializer):
     )
 
     class Meta:
-        fields = ('category', 'genre', 'name', 'year')
+        fields = ('id', 'category', 'genre', 'name', 'year')
         model = Titles
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    author = serializers.SlugRelatedField(slug_field='username',
+                                          read_only=True)
+    title = serializers.SlugRelatedField(slug_field='id',
+                                         read_only=True)
+
+    class Meta:
+        model = Review
+        fields = ('id', 'title', 'text', 'author', 'score', 'pub_date')
+
+
+class CommentsSerializer(serializers.ModelSerializer):
+    author = serializers.SlugRelatedField(slug_field='username',
+                                          read_only=True)
+
+    class Meta:
+        model = Comments
+        fields = ('id', 'author', 'text', 'pub_date')
