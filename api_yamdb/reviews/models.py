@@ -1,6 +1,8 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
-from users.models import CustomUser
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class Title(models.Model):
@@ -76,7 +78,7 @@ class Review(models.Model):
                               on_delete=models.CASCADE,
                               related_name='reviews')
     text = models.TextField('Текст отзыва')
-    author = models.ForeignKey(CustomUser, on_delete=models.CASCADE,
+    author = models.ForeignKey(User, on_delete=models.CASCADE,
                                related_name='reviews')
     score = models.IntegerField('Оценка', validators=[MinValueValidator(1),
                                                       MaxValueValidator(10)])
@@ -92,7 +94,7 @@ class Review(models.Model):
 
 class Comments(models.Model):
     text = models.TextField('Текст комментария')
-    author = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
     pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
     review = models.ForeignKey(Review, on_delete=models.CASCADE,
                                related_name='comments')
