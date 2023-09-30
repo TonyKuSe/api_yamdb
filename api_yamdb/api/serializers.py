@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from reviews.models import Category, Comments, Genre, Title, Review
+from reviews.models import Category, Comments, Genre, Review, Title
 from rest_framework.validators import UniqueValidator
 
 
