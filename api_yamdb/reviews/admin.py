@@ -1,10 +1,11 @@
 from django.contrib import admin
-
 from import_export.admin import ImportExportActionModelAdmin
-from reviews.models import Titles, Genre, GenreTitle, Category
+from reviews.models import (Title, Genre, GenreTitle, Category,
+                            Review, Comments)
 
-@admin.register(Titles)
-class TitlesAdmin(ImportExportActionModelAdmin):
+
+@admin.register(Title)
+class TitleAdmin(ImportExportActionModelAdmin):
     list_display = ('id', 'name', 'year', 'category', 'description')
 
 
@@ -21,3 +22,13 @@ class GenreTitleAdmin(ImportExportActionModelAdmin):
 @admin.register(Category)
 class CategoryAdmin(ImportExportActionModelAdmin):
     list_display = ('id', 'name', 'slug')
+
+
+@admin.register(Review)
+class ReviewsAdmin(ImportExportActionModelAdmin):
+    list_display = ('id', 'title', 'text', 'author', 'score')
+
+
+@admin.register(Comments)
+class CommentsAdmin(ImportExportActionModelAdmin):
+    list_display = ('id', 'text', 'author', 'review')
