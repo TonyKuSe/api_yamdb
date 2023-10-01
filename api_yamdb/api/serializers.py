@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from reviews.models import Category, Comments, Genre, Review, Title
-from rest_framework.validators import UniqueValidator
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -47,6 +46,7 @@ class TitleWriteSerializer(serializers.ModelSerializer):
 
 
 class ReviewSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели Review."""
     author = serializers.SlugRelatedField(slug_field='username',
                                           read_only=True)
     title = serializers.SlugRelatedField(slug_field='id',
@@ -57,6 +57,7 @@ class ReviewSerializer(serializers.ModelSerializer):
         fields = ('id', 'title', 'text', 'author', 'score', 'pub_date')
 
     def validate(self, data):
+        """Проверяет, что пользователь не оставил отзыв дважды"""
         if self.context['request'].method == 'PATCH':
             return data
         title = self.context['view'].kwargs['title_id']
@@ -67,10 +68,10 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 
 class CommentsSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели Comments."""
     author = serializers.SlugRelatedField(
-        slug_field='username', read_only=True,
-        validators=[UniqueValidator(queryset=Comments.objects.all())])
-    
+        slug_field='username', read_only=True)
+
     class Meta:
         model = Comments
         fields = ('id', 'author', 'text', 'pub_date')

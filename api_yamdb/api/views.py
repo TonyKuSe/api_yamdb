@@ -4,17 +4,15 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 from rest_framework import filters, permissions, viewsets
 from api.serializers import (CategorySerializer, CommentsSerializer,
-                             GenreSerializer, ReviewSerializer,
-                             TitleSerializer)
+                             GenreSerializer, ReviewSerializer)
 from api.mixins import BasaModelViewMixin
-from reviews.models import Category, Title, Genre
+from reviews.models import Category, Title, Genre, Review
 
 from api.filters import TitleFilter
 from api.serializers import (CategorySerializer, CommentsSerializer,
                              GenreSerializer, ReviewSerializer,
                              TitleReadSerializer, TitleWriteSerializer)
 from api.mixins import BasaModelViewMixin
-from reviews.models import Category, Comments, Genre, Title
 
 
 class CategoryViewSet(BasaModelViewMixin):
@@ -59,7 +57,10 @@ class TitleViewSet(viewsets.ModelViewSet):
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
+    """Вьюсет для работы с моделью Review."""
     serializer_class = ReviewSerializer
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+    http_method_names = ['get', 'post', 'head', 'options', 'patch', 'delete']
 
     def get_queryset(self):
         title = get_object_or_404(Title, pk=self.kwargs.get('title_id'))
@@ -71,16 +72,15 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
 
 class CommentsViewSet(viewsets.ModelViewSet):
+    """Вьюсет для работы с моделью Comments."""
     serializer_class = CommentsSerializer
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+    http_method_names = ['get', 'post', 'head', 'options', 'patch', 'delete']
 
     def get_queryset(self):
-        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
-        review = get_object_or_404(
-            title.reviews, id=self.kwargs.get('review_id'))
+        review = get_object_or_404(Review, id=self.kwargs.get('review_id'))
         return review.comments.all()
 
     def perform_create(self, serializer):
-        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
-        review = get_object_or_404(
-            title.reviews, id=self.kwargs.get('review_id'))
+        review = get_object_or_404(Review, id=self.kwargs.get('review_id'))
         serializer.save(author=self.request.user, review=review)
