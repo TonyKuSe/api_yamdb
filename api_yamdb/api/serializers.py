@@ -1,7 +1,9 @@
+from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from reviews.models import Category, Comments, Genre, Review, Title
 from rest_framework.validators import UniqueValidator
+from users.models import EmailVerification
 
 
 User = get_user_model()
@@ -75,8 +77,65 @@ class CommentsSerializer(serializers.ModelSerializer):
 
 
 class UserSignUpSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(
+        required=True,
+        validators=[UniqueValidator(queryset=User.objects.all())],
+        max_length=254
+    )
+    username = serializers.RegexField(
+        regex=r'^[\w.@+-]+$',
+        required=True,
+        validators=[UniqueValidator(queryset=User.objects.all())],
+        max_length=150
+    )
+
+    class Meta:
+        model = User
+        fields = ('username', 'email')
+
+    def validate(self, attrs):
+        username = attrs.get('username')
+        email = attrs.get('email')
+        if username and email:
+            if username == 'me':
+                raise serializers.ValidationError(
+                    'Нельзя выбрать имя пользователя "me"'
+                )
+            return super().validate(attrs)
+        else:
+            raise serializers.ValidationError(
+                'Запрос не содержит необходимых данных'
+            )
+
+
+class UserAuthTokenSerializer(serializers.Serializer):
+    username = serializers.RegexField(
+        regex=r'^[\w.@+-]+$',
+        max_length=150,
+        required=True
+    )
+    confirmation_code = serializers.CharField(
+        max_length=150,
+        required=True
+    )
+
+    def validate(self, attrs):
+        verify = get_object_or_404(
+            EmailVerification,
+            user__username=attrs['username'],
+        )
+        if verify.confirmation_code == attrs['confirmation_code']:
+            return super().validate(attrs)
+        else:
+            raise serializers.ValidationError(
+                'Отсутствует обязательное поле или оно некорректно'
+            )
+
+
+class UserSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = User
         fields = (
-            'email', 'username'
+            'username', 'email', 'first_name', 'last_name', 'bio', 'role'
         )
