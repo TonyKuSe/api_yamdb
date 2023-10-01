@@ -3,6 +3,11 @@ from django.db.models import Avg
 from django_filters.rest_framework import DjangoFilterBackend
 
 from rest_framework import filters, permissions, viewsets
+from api.serializers import (CategorySerializer, CommentsSerializer,
+                             GenreSerializer, ReviewSerializer,
+                             TitleSerializer)
+from api.mixins import BasaModelViewMixin
+from reviews.models import Category, Title, Genre
 
 from api.filters import TitleFilter
 from api.serializers import (CategorySerializer, CommentsSerializer,
@@ -10,6 +15,7 @@ from api.serializers import (CategorySerializer, CommentsSerializer,
                              TitleReadSerializer, TitleWriteSerializer)
 from api.mixins import BasaModelViewMixin
 from reviews.models import Category, Comments, Genre, Title
+
 
 class CategoryViewSet(BasaModelViewMixin):
     """
@@ -54,7 +60,6 @@ class TitleViewSet(viewsets.ModelViewSet):
 
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
-    permission_classes = (IsAuthorOrUserOrModerator,)
 
     def get_queryset(self):
         title = get_object_or_404(Title, pk=self.kwargs.get('title_id'))
@@ -67,7 +72,6 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
 class CommentsViewSet(viewsets.ModelViewSet):
     serializer_class = CommentsSerializer
-    permission_classes = (IsAuthorOrUserOrModerator,)
 
     def get_queryset(self):
         title = get_object_or_404(Title, id=self.kwargs.get('title_id'))

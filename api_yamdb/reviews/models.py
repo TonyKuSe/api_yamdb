@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+
 class Title(models.Model):
     name = models.CharField('Название произведения',
                             max_length=200,
@@ -70,4 +71,38 @@ class GenreTitle(models.Model):
 
     def __str__(self):
         return f'{self.title_id} {self.genre_id}'
-    
+
+
+class Review(models.Model):
+    title = models.ForeignKey(Title, verbose_name='titles',
+                              on_delete=models.CASCADE,
+                              related_name='reviews')
+    text = models.TextField('Текст отзыва')
+    author = models.ForeignKey(User, on_delete=models.CASCADE,
+                               related_name='reviews')
+    score = models.IntegerField('Оценка', validators=[MinValueValidator(1),
+                                                      MaxValueValidator(10)])
+    pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Отзыв'
+        verbose_name_plural = 'Отзывы'
+
+    def __str__(self):
+        return self.text
+
+
+class Comments(models.Model):
+    text = models.TextField('Текст комментария')
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
+    review = models.ForeignKey(Review, on_delete=models.CASCADE,
+                               related_name='comments')
+
+    class Meta:
+        verbose_name = 'Комментарий'
+        verbose_name_plural = 'Коментарии'
+
+    def __str__(self):
+        return self.text
+

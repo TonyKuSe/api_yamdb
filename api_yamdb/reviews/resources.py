@@ -1,6 +1,6 @@
 from import_export import resources
-from reviews.models import (Category, Comments,
-                            Genre, Review, Title)
+from reviews.models import (Category, Comments, Genre, GenreTitle,
+                            Review, Title)
 
 
 class TitleResources(resources.ModelResource):
