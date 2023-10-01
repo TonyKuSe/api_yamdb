@@ -1,8 +1,9 @@
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
-from reviews.models import Category, Comments, Genre, Review, Title
 from rest_framework.validators import UniqueValidator
+
+from reviews.models import Category, Comments, Genre, Review, Title
 from users.models import EmailVerification
 
 
@@ -10,29 +11,35 @@ User = get_user_model()
 
 
 class CategorySerializer(serializers.ModelSerializer):
-
-    count = serializers.SerializerMethodField()
-
     class Meta:
-        fields = ('id', 'name', 'slug', 'count',)
-        read_only_fields = ('id',)
+        fields = ('name', 'slug',)
         model = Category
-        lookup_field = 'name'
-
-    def get_count(self, obj):
-        return Category.objects.all().count()
+        lookup_field = 'slug'
 
 
 class GenreSerializer(serializers.ModelSerializer):
-
     class Meta:
-        fields = ('id', 'name', 'slug',)
-        read_only_fields = ('id',)
+        fields = ('name', 'slug',)
         model = Genre
         lookup_field = 'slug'
 
 
-class TitleSerializer(serializers.ModelSerializer):
+class TitleReadSerializer(serializers.ModelSerializer):
+    category = CategorySerializer(read_only=True)
+    genre = GenreSerializer(
+        read_only=True,
+        many=True
+    )
+    rating = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        fields = ('id', 'category',
+                  'genre', 'name', 'year',
+                  'description', 'rating')
+        model = Title
+
+
+class TitleWriteSerializer(serializers.ModelSerializer):
     category = serializers.SlugRelatedField(
         queryset=Category.objects.all(),
         slug_field='slug')
@@ -47,6 +54,7 @@ class TitleSerializer(serializers.ModelSerializer):
 
 
 class ReviewSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели Review."""
     author = serializers.SlugRelatedField(slug_field='username',
                                           read_only=True)
     title = serializers.SlugRelatedField(slug_field='id',
@@ -57,6 +65,7 @@ class ReviewSerializer(serializers.ModelSerializer):
         fields = ('id', 'title', 'text', 'author', 'score', 'pub_date')
 
     def validate(self, data):
+        """Проверяет, что пользователь не оставил отзыв дважды"""
         if self.context['request'].method == 'PATCH':
             return data
         title = self.context['view'].kwargs['title_id']
@@ -67,9 +76,9 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 
 class CommentsSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели Comments."""
     author = serializers.SlugRelatedField(
-        slug_field='username', read_only=True,
-        validators=[UniqueValidator(queryset=Comments.objects.all())])
+        slug_field='username', read_only=True)
 
     class Meta:
         model = Comments
