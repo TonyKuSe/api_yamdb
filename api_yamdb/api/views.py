@@ -1,10 +1,20 @@
 from django.shortcuts import get_object_or_404
+from django.db.models import Avg
+from django_filters.rest_framework import DjangoFilterBackend
+
 from rest_framework import filters, permissions, viewsets
 from api.serializers import (CategorySerializer, CommentsSerializer,
                              GenreSerializer, ReviewSerializer,
                              TitleSerializer)
 from api.mixins import BasaModelViewMixin
 from reviews.models import Category, Title, Genre
+
+from api.filters import TitleFilter
+from api.serializers import (CategorySerializer, CommentsSerializer,
+                             GenreSerializer, ReviewSerializer,
+                             TitleReadSerializer, TitleWriteSerializer)
+from api.mixins import BasaModelViewMixin
+from reviews.models import Category, Comments, Genre, Title
 
 
 class CategoryViewSet(BasaModelViewMixin):
@@ -27,7 +37,7 @@ class GenreViewSet(BasaModelViewMixin):
     serializer_class = GenreSerializer
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
     filter_backends = (filters.SearchFilter,)
-    search_fields = ('name', )
+    search_fields = ('name',)
     lookup_field = 'slug'
 
 
@@ -35,9 +45,17 @@ class TitleViewSet(viewsets.ModelViewSet):
     """
     Получить список всех объектов. Права доступа: Доступно без токена
     """
-    queryset = Title.objects.all()
+    queryset = Title.objects.annotate(
+        rating=Avg('reviews__score')
+    ).all()
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
-    serializer_class = TitleSerializer
+    filter_backends = (DjangoFilterBackend, )
+    filterset_class = TitleFilter
+
+    def get_serializer_class(self):
+        if self.action in ('list', 'retrieve'):
+            return TitleReadSerializer
+        return TitleWriteSerializer
 
 
 class ReviewViewSet(viewsets.ModelViewSet):

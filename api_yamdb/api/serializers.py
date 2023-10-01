@@ -4,29 +4,35 @@ from rest_framework.validators import UniqueValidator
 
 
 class CategorySerializer(serializers.ModelSerializer):
-
-    count = serializers.SerializerMethodField()
-
     class Meta:
-        fields = ('id', 'name', 'slug', 'count',)
-        read_only_fields = ('id',)
+        fields = ('name', 'slug',)
         model = Category
-        lookup_field = 'name'
-
-    def get_count(self, obj):
-        return Category.objects.all().count()
+        lookup_field = 'slug'
 
 
 class GenreSerializer(serializers.ModelSerializer):
-
     class Meta:
-        fields = ('id', 'name', 'slug',)
-        read_only_fields = ('id',)
+        fields = ('name', 'slug',)
         model = Genre
         lookup_field = 'slug'
 
 
-class TitleSerializer(serializers.ModelSerializer):
+class TitleReadSerializer(serializers.ModelSerializer):
+    category = CategorySerializer(read_only=True)
+    genre = GenreSerializer(
+        read_only=True,
+        many=True
+    )
+    rating = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        fields = ('id', 'category',
+                  'genre', 'name', 'year',
+                  'description', 'rating')
+        model = Title
+
+
+class TitleWriteSerializer(serializers.ModelSerializer):
     category = serializers.SlugRelatedField(
         queryset=Category.objects.all(),
         slug_field='slug')
@@ -64,7 +70,7 @@ class CommentsSerializer(serializers.ModelSerializer):
     author = serializers.SlugRelatedField(
         slug_field='username', read_only=True,
         validators=[UniqueValidator(queryset=Comments.objects.all())])
-
+    
     class Meta:
         model = Comments
         fields = ('id', 'author', 'text', 'pub_date')
