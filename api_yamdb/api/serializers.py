@@ -70,7 +70,7 @@ class CommentsSerializer(serializers.ModelSerializer):
     author = serializers.SlugRelatedField(
         slug_field='username', read_only=True,
         validators=[UniqueValidator(queryset=Comments.objects.all())])
-    
+
     class Meta:
         model = Comments
         fields = ('id', 'author', 'text', 'pub_date')

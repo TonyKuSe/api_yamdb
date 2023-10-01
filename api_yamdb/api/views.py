@@ -4,8 +4,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 from rest_framework import filters, permissions, viewsets
 from api.serializers import (CategorySerializer, CommentsSerializer,
-                             GenreSerializer, ReviewSerializer,
-                             TitleSerializer)
+                             GenreSerializer, ReviewSerializer)
 from api.mixins import BasaModelViewMixin
 from reviews.models import Category, Title, Genre
 
@@ -14,7 +13,7 @@ from api.serializers import (CategorySerializer, CommentsSerializer,
                              GenreSerializer, ReviewSerializer,
                              TitleReadSerializer, TitleWriteSerializer)
 from api.mixins import BasaModelViewMixin
-from reviews.models import Category, Comments, Genre, Title
+from reviews.models import Category, Genre, Title
 
 
 class CategoryViewSet(BasaModelViewMixin):
