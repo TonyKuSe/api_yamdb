@@ -14,8 +14,8 @@ from .serializers import (
     UserAuthTokenSerializer, UserSerializer, UserSignUpSerializer
 )
 from .permissions import (
-    CreateOnly, IsAdmin, IsAuthor, IsModerator, ReadOnly, ReadOnlyMe,
-    ReadOrUpdateOnlyMe
+    IsAdmin, IsAdminOrReadOnly,
+    ReadOrUpdateOnlyMe, AuthorAdminModeratorOrReadOnly
 )
 from reviews.models import Category, Genre, Review, Title
 from users.models import EmailVerification
@@ -30,7 +30,10 @@ class CategoryViewSet(BasaModelViewMixin):
     """
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = (ReadOnly | permissions.IsAuthenticated & IsAdmin,)
+    http_method_names = ['get', 'post', 'delete']
+    permission_classes = (
+        permissions.IsAuthenticatedOrReadOnly & IsAdminOrReadOnly,
+    )
     filter_backends = (filters.SearchFilter, )
     search_fields = ('name', )
     lookup_field = 'slug'
@@ -42,8 +45,9 @@ class GenreViewSet(BasaModelViewMixin):
     """
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
+    http_method_names = ['get', 'post', 'delete']
     permission_classes = (
-        ReadOnly | permissions.IsAuthenticated & IsAdmin,
+        permissions.IsAuthenticatedOrReadOnly & IsAdminOrReadOnly,
     )
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
@@ -58,11 +62,11 @@ class TitleViewSet(viewsets.ModelViewSet):
         rating=Avg('reviews__score')
     ).all()
     permission_classes = (
-        permissions.IsAuthenticated & IsAdmin
-        | permissions.IsAuthenticatedOrReadOnly,
+        permissions.IsAuthenticatedOrReadOnly & IsAdminOrReadOnly,
     )
     filter_backends = (DjangoFilterBackend, )
     filterset_class = TitleFilter
+    http_method_names = ['get', 'post', 'patch', 'delete']
 
     def get_serializer_class(self):
         if self.action in ('list', 'retrieve'):
@@ -74,11 +78,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
     """Вьюсет для работы с моделью Review."""
     serializer_class = ReviewSerializer
     permission_classes = (
-        permissions.IsAuthenticated & IsModerator
-        | permissions.IsAuthenticated & IsAdmin
-        | permissions.IsAuthenticated & CreateOnly
-        | permissions.IsAuthenticated & IsAuthor
-        | permissions.IsAuthenticatedOrReadOnly,
+        permissions.IsAuthenticatedOrReadOnly & AuthorAdminModeratorOrReadOnly,
     )
     http_method_names = ['get', 'post', 'head', 'options', 'patch', 'delete']
 
@@ -95,11 +95,7 @@ class CommentsViewSet(viewsets.ModelViewSet):
     """Вьюсет для работы с моделью Comments."""
     serializer_class = CommentsSerializer
     permission_classes = (
-        permissions.IsAuthenticated & IsModerator
-        | permissions.IsAuthenticated & IsAdmin
-        | permissions.IsAuthenticated & CreateOnly
-        | permissions.IsAuthenticated & IsAuthor
-        | permissions.IsAuthenticatedOrReadOnly,
+        permissions.IsAuthenticatedOrReadOnly & AuthorAdminModeratorOrReadOnly,
     )
     http_method_names = ['get', 'post', 'head', 'options', 'patch', 'delete']
 
@@ -180,7 +176,9 @@ class UserModelViewSet(viewsets.ModelViewSet):
     filter_backends = (filters.SearchFilter, )
     search_fields = ('username', )
     http_method_names = ['get', 'post', 'patch', 'delete']
-    permission_classes = (permissions.IsAuthenticated, IsAdmin | ReadOrUpdateOnlyMe)
+    permission_classes = (
+        permissions.IsAuthenticated & ReadOrUpdateOnlyMe | IsAdmin,
+    )
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
