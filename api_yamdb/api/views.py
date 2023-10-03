@@ -13,6 +13,10 @@ from .serializers import (
     ReviewSerializer, TitleReadSerializer, TitleWriteSerializer,
     UserAuthTokenSerializer, UserSerializer, UserSignUpSerializer
 )
+from .permissions import (
+    CreateOnly, IsAdmin, IsAuthor, IsModerator, ReadOnly, ReadOnlyMe,
+    ReadOrUpdateOnlyMe
+)
 from reviews.models import Category, Genre, Review, Title
 from users.models import EmailVerification
 
@@ -26,7 +30,7 @@ class CategoryViewSet(BasaModelViewMixin):
     """
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+    permission_classes = (ReadOnly | permissions.IsAuthenticated & IsAdmin,)
     filter_backends = (filters.SearchFilter, )
     search_fields = ('name', )
     lookup_field = 'slug'
@@ -38,7 +42,9 @@ class GenreViewSet(BasaModelViewMixin):
     """
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+    permission_classes = (
+        ReadOnly | permissions.IsAuthenticated & IsAdmin,
+    )
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
     lookup_field = 'slug'
@@ -51,7 +57,10 @@ class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.annotate(
         rating=Avg('reviews__score')
     ).all()
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+    permission_classes = (
+        permissions.IsAuthenticated & IsAdmin
+        | permissions.IsAuthenticatedOrReadOnly,
+    )
     filter_backends = (DjangoFilterBackend, )
     filterset_class = TitleFilter
 
@@ -64,7 +73,13 @@ class TitleViewSet(viewsets.ModelViewSet):
 class ReviewViewSet(viewsets.ModelViewSet):
     """Вьюсет для работы с моделью Review."""
     serializer_class = ReviewSerializer
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+    permission_classes = (
+        permissions.IsAuthenticated & IsModerator
+        | permissions.IsAuthenticated & IsAdmin
+        | permissions.IsAuthenticated & CreateOnly
+        | permissions.IsAuthenticated & IsAuthor
+        | permissions.IsAuthenticatedOrReadOnly,
+    )
     http_method_names = ['get', 'post', 'head', 'options', 'patch', 'delete']
 
     def get_queryset(self):
@@ -79,7 +94,13 @@ class ReviewViewSet(viewsets.ModelViewSet):
 class CommentsViewSet(viewsets.ModelViewSet):
     """Вьюсет для работы с моделью Comments."""
     serializer_class = CommentsSerializer
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+    permission_classes = (
+        permissions.IsAuthenticated & IsModerator
+        | permissions.IsAuthenticated & IsAdmin
+        | permissions.IsAuthenticated & CreateOnly
+        | permissions.IsAuthenticated & IsAuthor
+        | permissions.IsAuthenticatedOrReadOnly,
+    )
     http_method_names = ['get', 'post', 'head', 'options', 'patch', 'delete']
 
     def get_queryset(self):
@@ -141,8 +162,15 @@ class UserAuthTokenAPIView(views.APIView):
     def post(self, request):
         serializer = UserAuthTokenSerializer(data=request.data)
         if serializer.is_valid():
-            token = str(RefreshToken.for_user(request.user).access_token)
-            return Response({'token': token}, status=status.HTTP_200_OK)
+            username = request.data['username']
+            user = User.objects.filter(username=username).first()
+            if user:
+                token = str(RefreshToken.for_user(user).access_token)
+                return Response({'token': token}, status=status.HTTP_200_OK)
+            return Response(
+                {'message': f'There is no user with username {username}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -151,6 +179,8 @@ class UserModelViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     filter_backends = (filters.SearchFilter, )
     search_fields = ('username', )
+    http_method_names = ['get', 'post', 'patch', 'delete']
+    permission_classes = (permissions.IsAuthenticated, IsAdmin | ReadOrUpdateOnlyMe)
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -166,3 +196,32 @@ class UserModelViewSet(viewsets.ModelViewSet):
         return Response(
             serializer.data, status=status.HTTP_201_CREATED, headers=headers
         )
+
+    def get_object(self):
+        queryset = self.filter_queryset(self.get_queryset())
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        assert lookup_url_kwarg in self.kwargs, (
+            'Expected view %s to be called with a URL keyword argument '
+            'named "%s". Fix your URL conf, or set the `.lookup_field` '
+            'attribute on the view correctly.' %
+            (self.__class__.__name__, lookup_url_kwarg)
+        )
+        filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
+        obj = None
+        username = filter_kwargs['pk']
+        if username == 'me':
+            obj = self.request.user
+        else:
+            obj = get_object_or_404(queryset, username=username)
+        self.check_object_permissions(self.request, obj)
+        return obj
+
+    def destroy(self, request, pk=None):
+        if pk == 'me':
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return super().destroy(self, request, pk)
+
+    def update(self, request, *args, **kwargs):
+        if kwargs['pk'] == 'me' and 'role' in request.data:
+            return Response({'role': 'Собственную роль изменить нельзя'})
+        return super().update(request, *args, **kwargs)
