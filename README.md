@@ -67,8 +67,8 @@ python3 manage.py runserver
 
 ## Авторы
 
-[Кузнецов Антон](https://github.com/TonyKuSe/)
-[Никита Прокофьев](https://github.com/lordrie)
-[Роман Матросов](https://github.com/RomanMatrosovFrontend)
+- [Антон Кузнецов](https://github.com/TonyKuSe/)
+- [Никита Прокофьев](https://github.com/lordrie)
+- [Роман Матросов](https://github.com/RomanMatrosovFrontend)
 
 *Проект разработан с целью изучения инструмента Django REST framework и совместной работы с использованием github*
