@@ -142,6 +142,17 @@ class UserAuthTokenSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(
+        required=True,
+        validators=[UniqueValidator(queryset=User.objects.all())],
+        max_length=254
+    )
+    username = serializers.RegexField(
+        regex=r'^[\w.@+-]+$',
+        max_length=150,
+        required=True,
+        validators=[UniqueValidator(queryset=User.objects.all())],
+    )
 
     class Meta:
         model = User
