@@ -4,6 +4,9 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+MIN_SCORE = 1
+MAX_SCORE = 10
+
 
 class Title(models.Model):
     name = models.CharField('Название произведения',
@@ -80,16 +83,17 @@ class Review(models.Model):
     text = models.TextField('Текст отзыва')
     author = models.ForeignKey(User, on_delete=models.CASCADE,
                                related_name='reviews')
-    score = models.IntegerField('Оценка', validators=[MinValueValidator(1),
-                                                      MaxValueValidator(10)])
+    score = models.PositiveSmallIntegerField(
+        'Оценка', validators=[MinValueValidator(MIN_SCORE),
+                              MaxValueValidator(MAX_SCORE)])
     pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
 
     class Meta:
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
         constraints = [models.UniqueConstraint(
-            fields=["title", "author"],
-            name="unique_review")]
+            fields=['title', 'author'],
+            name='unique_review')]
 
     def __str__(self):
         return self.text
@@ -107,4 +111,4 @@ class Comments(models.Model):
         verbose_name_plural = 'Коментарии'
 
     def __str__(self):
-        return self.text
+        return self.text[:15]
