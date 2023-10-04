@@ -144,7 +144,6 @@ class UserSignUpViewSet(viewsets.GenericViewSet):
                 user=user
             )
         else:
-            print(type(user))
             verify = get_object_or_404(EmailVerification, user=user)
         verify.set_new_confirm_code()
         verify.send_verification_email()
