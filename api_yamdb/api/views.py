@@ -170,6 +170,7 @@ class UserAuthTokenAPIView(views.APIView):
 
 
 class UserModelViewSet(viewsets.ModelViewSet):
+    PERSONAL_PATH = 'me'
     queryset = User.objects.all()
     serializer_class = UserSerializer
     filter_backends = (filters.SearchFilter, )
@@ -206,7 +207,7 @@ class UserModelViewSet(viewsets.ModelViewSet):
         filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
         obj = None
         username = filter_kwargs['pk']
-        if username == 'me':
+        if username == self.PERSONAL_PATH:
             obj = self.request.user
         else:
             obj = get_object_or_404(queryset, username=username)
@@ -214,11 +215,11 @@ class UserModelViewSet(viewsets.ModelViewSet):
         return obj
 
     def destroy(self, request, pk=None):
-        if pk == 'me':
+        if pk == self.PERSONAL_PATH:
             return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
         return super().destroy(self, request, pk)
 
     def update(self, request, *args, **kwargs):
-        if kwargs['pk'] == 'me' and 'role' in request.data:
+        if kwargs['pk'] == self.PERSONAL_PATH and 'role' in request.data:
             return Response({'role': 'Собственную роль изменить нельзя'})
         return super().update(request, *args, **kwargs)
