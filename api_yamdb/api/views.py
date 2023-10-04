@@ -132,8 +132,8 @@ class UserSignUpViewSet(viewsets.GenericViewSet):
             )
         user = User.objects.filter(
             username=request.data['username'], email=request.data['email']
-        )[:1]
-        if not user.exists():
+        ).first()
+        if not user:
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             user = User.objects.create(
