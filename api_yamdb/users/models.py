@@ -7,14 +7,17 @@ from django.db import models
 
 
 class CustomUser(AbstractUser):
+    USER_ROLE = 'user'
+    MODER_ROLE = 'moderator'
+    ADMIN_ROLE = 'admin'
     ROLE_CHOISES = [
-        ('user', 'user'),
-        ('moderator', 'moderator'),
-        ('admin', 'admin'),
+        (USER_ROLE, 'user'),
+        (MODER_ROLE, 'moderator'),
+        (ADMIN_ROLE, 'admin'),
     ]
     bio = models.TextField(verbose_name='Биография', blank=True)
     role = models.CharField(
-        verbose_name='Роль', default='user',
+        verbose_name='Роль', default=USER_ROLE,
         max_length=20, choices=ROLE_CHOISES)
 
     class Meta:
@@ -22,16 +25,16 @@ class CustomUser(AbstractUser):
 
     @property
     def is_user(self):
-        return self.role == 'user'
+        return self.role == self.USER_ROLE
 
     @property
     def is_moderator(self):
-        return self.role == 'moderator'
+        return self.role == self.MODER_ROLE
 
     @property
     def is_admin(self):
         return (
-            self.role == 'admin'
+            self.role == self.ADMIN_ROLE
             or self.is_superuser
             or self.is_staff)
 
