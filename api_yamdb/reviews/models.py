@@ -2,6 +2,8 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth import get_user_model
 
+from reviews.validates import validate_year
+
 User = get_user_model()
 
 
@@ -9,7 +11,9 @@ class Title(models.Model):
     name = models.CharField('Название произведения',
                             max_length=200,
                             db_index=True)
-    year = models.IntegerField('Год написания')
+    year = models.PositiveSmallIntegerField('Год написания',
+                                            db_index=True,
+                                            validators=[validate_year,])
     category = models.ForeignKey('Category',
                                  on_delete=models.SET_NULL,
                                  null=True,
@@ -26,6 +30,7 @@ class Title(models.Model):
     class Meta:
         verbose_name = 'Произведение'
         verbose_name_plural = 'Произведения'
+        ordering = ['year']
 
     def __str__(self):
         return self.name
@@ -41,10 +46,11 @@ class Category(models.Model):
     class Meta:
         verbose_name = 'Категория'
         verbose_name_plural = 'Категории'
-
+        ordering = ['name']
+        
     def __str__(self):
         return self.name
-
+        
 
 class Genre(models.Model):
     name = models.CharField('Название', max_length=256)
@@ -56,21 +62,24 @@ class Genre(models.Model):
     class Meta:
         verbose_name = 'Жанр'
         verbose_name_plural = 'Жанры'
-
+        ordering = ['name']
     def __str__(self):
         return self.name
 
 
 class GenreTitle(models.Model):
-    title_id = models.ForeignKey(Title,
-                                 on_delete=models.CASCADE,
-                                 related_name='genre_title')
-    genre_id = models.ForeignKey(Genre,
-                                 on_delete=models.CASCADE,
-                                 related_name='genre_title')
-
+    title = models.ForeignKey(Title,
+                              on_delete=models.CASCADE,
+                              related_name='genre_title')
+    genre = models.ForeignKey(Genre,
+                              on_delete=models.CASCADE,
+                              related_name='genre_title')
+    
+    class Meta:
+        ordering = ['title']
+    
     def __str__(self):
-        return f'{self.title_id} {self.genre_id}'
+        return f'{self.title} {self.genre}'
 
 
 class Review(models.Model):
