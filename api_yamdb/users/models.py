@@ -17,6 +17,9 @@ class CustomUser(AbstractUser):
         verbose_name='Роль', default='user',
         max_length=20, choices=ROLE_CHOISES)
 
+    class Meta:
+        ordering = ('username', )
+
     @property
     def is_user(self):
         return self.role == 'user'
