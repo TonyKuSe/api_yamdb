@@ -1,5 +1,4 @@
 import random
-from typing import Any
 
 from django.contrib.auth.models import AbstractUser
 from django.core.mail import send_mail
@@ -44,10 +43,6 @@ class EmailVerification(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        self.set_new_confirm_code()
-        super().__init__(*args, **kwargs)
 
     def __str__(self):
         return f'EmailVerification for {self.user.email}'

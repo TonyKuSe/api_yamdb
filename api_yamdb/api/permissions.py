@@ -29,7 +29,7 @@ class IsAdminOrReadOnly(permissions.BasePermission):
 class ReadOrUpdateOnlyMe(permissions.BasePermission):
 
     def has_permission(self, request, view):
-        return request.path.endswith('/me')
+        return request.path.endswith('me/')
 
     def has_object_permission(self, request, view, obj):
         return (
