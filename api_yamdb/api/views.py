@@ -156,17 +156,16 @@ class UserAuthTokenAPIView(views.APIView):
 
     def post(self, request):
         serializer = UserAuthTokenSerializer(data=request.data)
-        if serializer.is_valid():
-            username = request.data['username']
-            user = User.objects.filter(username=username).first()
-            if user:
-                token = str(RefreshToken.for_user(user).access_token)
-                return Response({'token': token}, status=status.HTTP_200_OK)
-            return Response(
-                {'message': f'There is no user with username {username}'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        username = request.data['username']
+        user = User.objects.filter(username=username).first()
+        if user:
+            token = str(RefreshToken.for_user(user).access_token)
+            return Response({'token': token}, status=status.HTTP_200_OK)
+        return Response(
+            {'message': f'There is no user with username {username}'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
 
 class UserModelViewSet(viewsets.ModelViewSet):
