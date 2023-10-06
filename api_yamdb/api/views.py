@@ -1,4 +1,6 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -18,7 +20,6 @@ from .permissions import (
     ReadOrUpdateOnlyMe, AuthorAdminModeratorOrReadOnly
 )
 from reviews.models import Category, Genre, Review, Title
-from users.models import EmailVerification
 
 
 User = get_user_model()
@@ -124,6 +125,25 @@ class UserSignUpViewSet(viewsets.GenericViewSet):
                 error_context[field_name] = [rquired_field_not_found_err]
         return error_context
 
+    def generate_and_send_code(self, user):
+        confirmation_code = default_token_generator.make_token(user)
+        send_mail(
+            subject='Код для получения токена',
+            message=f'''
+                <p>
+                    Для получения токена авторизации в API сервиса api_yamdb
+                    отправьте POST-запрос с параметрами username
+                    и confirmation_code на эндпоинт <i>/api/v1/auth/token/</i>
+                    <br>
+                    Ваш код подтверждения:
+                    <strong>{confirmation_code}</strong>
+                </p>
+            ''',
+            from_email='from@example.com',
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+
     def create(self, request):
         required_fields_not_exist = self.required_fields_not_exist(request)
         if required_fields_not_exist:
@@ -140,14 +160,7 @@ class UserSignUpViewSet(viewsets.GenericViewSet):
                 email=serializer.validated_data['email'],
                 username=serializer.validated_data['username'],
             )
-            verify = EmailVerification.objects.create(
-                user=user
-            )
-        else:
-            verify = get_object_or_404(EmailVerification, user=user)
-        verify.set_new_confirm_code()
-        verify.send_verification_email()
-        verify.save()
+        self.generate_and_send_code(user)
         return Response(request.data, status=status.HTTP_200_OK)
 
 
@@ -183,12 +196,6 @@ class UserModelViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
-        user = self.queryset.get(username=serializer.data['username'])
-        verify = EmailVerification.objects.create(
-            user=user
-        )
-        verify.set_new_confirm_code()
-        verify.save()
         headers = self.get_success_headers(serializer.data)
         return Response(
             serializer.data, status=status.HTTP_201_CREATED, headers=headers
