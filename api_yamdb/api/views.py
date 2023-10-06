@@ -1,4 +1,6 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -18,7 +20,6 @@ from .permissions import (
     ReadOrUpdateOnlyMe, AuthorAdminModeratorOrReadOnly
 )
 from reviews.models import Category, Genre, Review, Title
-from users.models import EmailVerification
 
 
 User = get_user_model()
@@ -126,6 +127,25 @@ class UserSignUpViewSet(viewsets.GenericViewSet):
                 error_context[field_name] = [rquired_field_not_found_err]
         return error_context
 
+    def generate_and_send_code(self, user):
+        confirmation_code = default_token_generator.make_token(user)
+        send_mail(
+            subject='Код для получения токена',
+            message=f'''
+                <p>
+                    Для получения токена авторизации в API сервиса api_yamdb
+                    отправьте POST-запрос с параметрами username
+                    и confirmation_code на эндпоинт <i>/api/v1/auth/token/</i>
+                    <br>
+                    Ваш код подтверждения:
+                    <strong>{confirmation_code}</strong>
+                </p>
+            ''',
+            from_email='from@example.com',
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+
     def create(self, request):
         required_fields_not_exist = self.required_fields_not_exist(request)
         if required_fields_not_exist:
@@ -134,23 +154,15 @@ class UserSignUpViewSet(viewsets.GenericViewSet):
             )
         user = User.objects.filter(
             username=request.data['username'], email=request.data['email']
-        )[:1]
-        if not user.exists():
+        ).first()
+        if not user:
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             user = User.objects.create(
                 email=serializer.validated_data['email'],
                 username=serializer.validated_data['username'],
             )
-            verify = EmailVerification.objects.create(
-                user=user
-            )
-        else:
-            print(type(user))
-            verify = get_object_or_404(EmailVerification, user=user)
-        verify.set_new_confirm_code()
-        verify.send_verification_email()
-        verify.save()
+        self.generate_and_send_code(user)
         return Response(request.data, status=status.HTTP_200_OK)
 
 
@@ -159,20 +171,20 @@ class UserAuthTokenAPIView(views.APIView):
 
     def post(self, request):
         serializer = UserAuthTokenSerializer(data=request.data)
-        if serializer.is_valid():
-            username = request.data['username']
-            user = User.objects.filter(username=username).first()
-            if user:
-                token = str(RefreshToken.for_user(user).access_token)
-                return Response({'token': token}, status=status.HTTP_200_OK)
-            return Response(
-                {'message': f'There is no user with username {username}'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        username = request.data['username']
+        user = User.objects.filter(username=username).first()
+        if user:
+            token = str(RefreshToken.for_user(user).access_token)
+            return Response({'token': token}, status=status.HTTP_200_OK)
+        return Response(
+            {'message': f'There is no user with username {username}'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
 
 class UserModelViewSet(viewsets.ModelViewSet):
+    PERSONAL_PATH = 'me'
     queryset = User.objects.all()
     serializer_class = UserSerializer
     filter_backends = (filters.SearchFilter, )
@@ -186,12 +198,6 @@ class UserModelViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
-        user = self.queryset.get(username=serializer.data['username'])
-        verify = EmailVerification.objects.create(
-            user=user
-        )
-        verify.set_new_confirm_code()
-        verify.save()
         headers = self.get_success_headers(serializer.data)
         return Response(
             serializer.data, status=status.HTTP_201_CREATED, headers=headers
@@ -200,16 +206,17 @@ class UserModelViewSet(viewsets.ModelViewSet):
     def get_object(self):
         queryset = self.filter_queryset(self.get_queryset())
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
-        assert lookup_url_kwarg in self.kwargs, (
-            'Expected view %s to be called with a URL keyword argument '
-            'named "%s". Fix your URL conf, or set the `.lookup_field` '
-            'attribute on the view correctly.' %
-            (self.__class__.__name__, lookup_url_kwarg)
-        )
+        if lookup_url_kwarg not in self.kwargs:
+            raise Exception(
+                'Expected view %s to be called with a URL keyword argument '
+                'named "%s". Fix your URL conf, or set the `.lookup_field` '
+                'attribute on the view correctly.' %
+                (self.__class__.__name__, lookup_url_kwarg)
+            )
         filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
         obj = None
         username = filter_kwargs['pk']
-        if username == 'me':
+        if username == self.PERSONAL_PATH:
             obj = self.request.user
         else:
             obj = get_object_or_404(queryset, username=username)
@@ -217,11 +224,11 @@ class UserModelViewSet(viewsets.ModelViewSet):
         return obj
 
     def destroy(self, request, pk=None):
-        if pk == 'me':
+        if pk == self.PERSONAL_PATH:
             return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
         return super().destroy(self, request, pk)
 
     def update(self, request, *args, **kwargs):
-        if kwargs['pk'] == 'me' and 'role' in request.data:
+        if kwargs['pk'] == self.PERSONAL_PATH and 'role' in request.data:
             return Response({'role': 'Собственную роль изменить нельзя'})
         return super().update(request, *args, **kwargs)

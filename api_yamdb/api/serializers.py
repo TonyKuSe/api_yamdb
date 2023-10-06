@@ -1,10 +1,10 @@
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
+from django.contrib.auth.tokens import default_token_generator
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
 from reviews.models import Category, Comments, Genre, Review, Title
-from users.models import EmailVerification
 
 
 User = get_user_model()
@@ -131,11 +131,15 @@ class UserAuthTokenSerializer(serializers.Serializer):
     )
 
     def validate(self, attrs):
-        verify = get_object_or_404(
-            EmailVerification,
-            user__username=attrs['username'],
+        user = get_object_or_404(
+            User,
+            username=attrs['username'],
         )
-        if verify.confirmation_code == attrs['confirmation_code']:
+        code = attrs['confirmation_code']
+        if (
+            user
+            and default_token_generator.check_token(user, code)
+        ):
             return super().validate(attrs)
         else:
             raise serializers.ValidationError(

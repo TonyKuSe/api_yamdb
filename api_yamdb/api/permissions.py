@@ -29,14 +29,12 @@ class IsAdminOrReadOnly(permissions.BasePermission):
 class ReadOrUpdateOnlyMe(permissions.BasePermission):
 
     def has_permission(self, request, view):
-        if request.path.split('/')[-2] == 'me':
-            return True
-        return False
+        return request.path.endswith('me/')
 
     def has_object_permission(self, request, view, obj):
         return (
             request.method in permissions.SAFE_METHODS
-            or request.method == "PATCH"
+            or request.method == 'PATCH'
         )
 
 
