@@ -17,7 +17,7 @@ from .serializers import (
 )
 from .permissions import (
     IsAdmin, IsAdminOrReadOnly,
-    ReadOrUpdateOnlyMe, AuthorAdminModeratorOrReadOnly
+    ReadOrUpdateOnlyMe, AuthorAdminModeratorOrReadOnly, NotUpdateMeRole
 )
 from reviews.models import Category, Genre, Review, Title
 
@@ -191,7 +191,8 @@ class UserModelViewSet(viewsets.ModelViewSet):
     search_fields = ('username', )
     http_method_names = ['get', 'post', 'patch', 'delete']
     permission_classes = (
-        permissions.IsAuthenticated & ReadOrUpdateOnlyMe | IsAdmin,
+        permissions.IsAuthenticated & ReadOrUpdateOnlyMe & NotUpdateMeRole
+        | IsAdmin,
     )
 
     def create(self, request, *args, **kwargs):
@@ -227,8 +228,3 @@ class UserModelViewSet(viewsets.ModelViewSet):
         if pk == self.PERSONAL_PATH:
             return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
         return super().destroy(self, request, pk)
-
-    def update(self, request, *args, **kwargs):
-        if kwargs['pk'] == self.PERSONAL_PATH and 'role' in request.data:
-            return Response({'role': 'Собственную роль изменить нельзя'})
-        return super().update(request, *args, **kwargs)

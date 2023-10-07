@@ -38,6 +38,18 @@ class ReadOrUpdateOnlyMe(permissions.BasePermission):
         )
 
 
+class NotUpdateMeRole(permissions.BasePermission):
+
+    def has_object_permission(self, request, view, obj):
+        return (
+            not (
+                request.method == 'PATCH'
+                and request.path.endswith('me/')
+                and 'role' in request.data
+            )
+        )
+
+
 class AuthorAdminModeratorOrReadOnly(permissions.BasePermission):
 
     def has_object_permission(self, request, view, obj):
