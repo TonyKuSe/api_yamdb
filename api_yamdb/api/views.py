@@ -15,6 +15,7 @@ from .serializers import (
     ReviewSerializer, TitleReadSerializer, TitleWriteSerializer,
     UserAuthTokenSerializer, UserSerializer, UserSignUpSerializer
 )
+from django.conf import settings
 from .permissions import (
     IsAdmin, IsAdminOrReadOnly,
     ReadOrUpdateOnlyMe, AuthorAdminModeratorOrReadOnly, NotUpdateMeRole
@@ -141,7 +142,7 @@ class UserSignUpViewSet(viewsets.GenericViewSet):
                     <strong>{confirmation_code}</strong>
                 </p>
             ''',
-            from_email='from@example.com',
+            from_email=settings.EMAIL_HOST_USER,
             recipient_list=[user.email],
             fail_silently=False,
         )
