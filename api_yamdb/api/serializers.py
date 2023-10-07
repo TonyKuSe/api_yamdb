@@ -141,10 +141,9 @@ class UserAuthTokenSerializer(serializers.Serializer):
             and default_token_generator.check_token(user, code)
         ):
             return super().validate(attrs)
-        else:
-            raise serializers.ValidationError(
-                'Отсутствует обязательное поле или оно некорректно'
-            )
+        raise serializers.ValidationError(
+            'Отсутствует обязательное поле или оно некорректно'
+        )
 
 
 class UserSerializer(serializers.ModelSerializer):
