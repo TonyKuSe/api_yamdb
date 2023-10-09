@@ -5,6 +5,7 @@ from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, status, views, viewsets
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -18,7 +19,7 @@ from .serializers import (
 from django.conf import settings
 from .permissions import (
     IsAdmin, IsAdminOrReadOnly,
-    ReadOrUpdateOnlyMe, AuthorAdminModeratorOrReadOnly, NotUpdateMeRole
+    ReadOrUpdateOnlyMe, AuthorAdminModeratorOrReadOnly
 )
 from reviews.models import Category, Genre, Review, Title
 
@@ -192,9 +193,10 @@ class UserModelViewSet(viewsets.ModelViewSet):
     search_fields = ('username', )
     http_method_names = ['get', 'post', 'patch', 'delete']
     permission_classes = (
-        permissions.IsAuthenticated & ReadOrUpdateOnlyMe & NotUpdateMeRole
+        permissions.IsAuthenticated & ReadOrUpdateOnlyMe
         | IsAdmin,
     )
+    lookup_field = 'username'
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -205,27 +207,19 @@ class UserModelViewSet(viewsets.ModelViewSet):
             serializer.data, status=status.HTTP_201_CREATED, headers=headers
         )
 
-    def get_object(self):
-        queryset = self.filter_queryset(self.get_queryset())
-        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
-        if lookup_url_kwarg not in self.kwargs:
-            raise Exception(
-                'Expected view %s to be called with a URL keyword argument '
-                'named "%s". Fix your URL conf, or set the `.lookup_field` '
-                'attribute on the view correctly.' %
-                (self.__class__.__name__, lookup_url_kwarg)
+    @action(
+        detail=False,
+        methods=['get', 'patch'],
+        url_path=PERSONAL_PATH
+    )
+    def read_and_update_me(self, request):
+        if request.method == 'PATCH':
+            serializer = UserSerializer(
+                request.user, data=request.data,
+                partial=True, context={'request': request}
             )
-        filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
-        obj = None
-        username = filter_kwargs['pk']
-        if username == self.PERSONAL_PATH:
-            obj = self.request.user
-        else:
-            obj = get_object_or_404(queryset, username=username)
-        self.check_object_permissions(self.request, obj)
-        return obj
-
-    def destroy(self, request, pk=None):
-        if pk == self.PERSONAL_PATH:
-            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-        return super().destroy(self, request, pk)
+            serializer.is_valid(raise_exception=True)
+            serializer.save(role=request.user.role)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
