@@ -117,5 +117,8 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
+DOMAIN_NAME = 'yamdb.ru'
+
 EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
 EMAIL_FILE_PATH = BASE_DIR / 'sent_emails'
+EMAIL_HOST_USER = f'api@{DOMAIN_NAME}'
